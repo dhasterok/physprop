@@ -1,0 +1,1313 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include "physprop.h"
+
+/* Mineral references and notes:                                        *
+ *                                                                      *
+ *  1 from Jackson et al. [Eur. J. Mineral., 2003]                      *
+ *  2 average model of Hugh-Jones [Am. Mineral., 1997] and Yang &       *
+ *    Ghose [Phys. Chem. Mineral., 1994]                                *
+ *  3 from Sueda et al.[PEPI, 2008]                                     *
+ *  4 KT and K' for Enstatite from Angel & Jackson [Am. Mineral.,       *
+ *    2002], which shows results fairly consistent with other           *
+ *    measurements.  The second order quadratic fit to the data by      *
+ *    Flesch et al. [Am. Mineral., 1998] yields a K'' of -0.0064        *
+ *    GPa^-1.                                                           *
+ *  5 K' and gammaT from Yang & Ghose [Phys. Chem. Mineral., 1994].     *
+ *    change is also made there.                                        *
+ *  6 Computed from adiabatic bulk modulii in Schutt & Lescher [JGR,    *
+ *    2006].  The Gruenesion parameter is estimated from pyrope and     *
+ *    the Anderson-Gruenesion parameter also from pyrope.               *
+ *  7 All values from Sueda et al.[PEPI, 2008].  Although other         *
+ *    published Gruenesion parameters for spinel are ~1.3.              *
+ *  8 from Angel [Contrib. Mineral. Petrol., 2004], Downs [Am.          *
+ *    Mineralogist, 1994], the temperature derivative of the bulk       *
+ *    modulus actually comes from that of Nepheline (Na3KAl4Si4O16),    *
+ *    a feldspathoid of similar composition to Albite.  This value is   *
+ *    an order of magnitude lower than most common mantle silicates     *
+ *    [Bass, AGU, Handbook of Physical Constants, 1995].                *
+ *    I would guess that Anorthite has a temperature derivative more    *
+ *    similar to other silicates with higher bulk modulii hence the     *
+ *    estimate at -0.01, but still lower in keeping with feldspar(?).   *
+ *    Basically pulled the number out of my ass, but couldn't find a    *
+ *    published value anywhere... maybe someday I'll learn to compute   *
+ *    a more reasonable value.                                          *
+ *    Grueneison parameters for plagioclase phases from Hacker et al.   *
+ *    [JGR, 2003].                                                      *
+ *  9 from Hacker et al. [JGR, 2003]                                    *
+ * 10 reformulated from Holland and Powell [J. Metamorph. Petrol.,      *
+ *    1998]                                                             *
+ * 11 Berman & Abramovich [Contrib. Mineral.  Petrol. 1996]             *
+ * 12 Berman & Brown [Contrib. Mineral. Petrol. 1985]                   *
+ * 13 reformulated consants from Holland & Powell [1998]                *
+ * 14 [AGU Reference Desk, Handbook of Physical Properties, 1995]       *
+ * 15 from Stixrude & Lithgow-Bertelloni [Geophys. J. Int., 2005] the   *
+ *    delta_T values are estimated by delta_T = gammaT + K' (see        *
+ *    Hacker & Abers, [JGR, 2003] for approximation)                    *
+ * 16 values from Pawley et al. [Am. Mineral., 2002] and values for     *
+ *    clinochlore mean from Welch & Crichton [Eur. J. Mineral., 2002]   *
+ *    and Pawley et al. [Am. Mineral., 2002]                            *
+ * 17 hornblende is most closely related to pargasite and in the        *
+ *    absence of additional specific heat capacity data, the values for *
+ *    paragasite are used.                                              * 
+ * 18 Muscovite values from Comodi and Zanazzi [Phys. Chem. Minerals,   *
+ *    1995].                                                            *
+      Annite values for KT and K' and alpha from Pavese et al. [Am.     *
+ *    Min., 2007].  Phlogopite values are average of Hazen and Finger   *
+ *    [Am. Min. 1978], Comodi et al. [Eur. J. Min. 2004], Pavese et al. *
+ *    [Eur. J. Min. 2003] and therefore given the same values.          *
+ * 19 Holland and Powell [J. Metamorphic Geol., 1998]                   *
+ * 20 Values from Robertson & Hemingway [USGS OFR 95-622, 1995] switch  *
+ *    between aqz and bqz at 844 K                                      *
+ * 21 Values from Hacker et al. [JGR, 2003]                             *
+ * 22 Values for bulk modulus from Usui et al. [Japan Geoscience Union, *
+ *    Mtg., 2003].  K' is assumed.                                      *
+ * 23 Values from Ross and Reeder [Am. Mineralogist 1992] pressure      *
+ *    derivative is assumed to be 4.                                    *
+ * 24 Isaak et al. [Phys. Chem. Minerals, 1998].                        *
+ * 25 Yang et al. [Phys. Chem. Minerals, 1997].                         *
+ * 26 Estimated                                                         *
+ * 27 Estimated form Comodi & Zanazzi [Phys. Chem. Minerals, 1997]      *
+ *                                                                      * 
+ * Mineral abbreviations and index number                               *
+ *                                                                      *
+ *  0: plag-ab    albite             NaAl3Si3O8                         *
+ *  1: plag-an    anorthite          CaAl2Si2O8                         *
+ *  2: chl-clin   clinochlore        Mg5Al(AlSi3)O10(OH)8               *
+ *  3: chl-daph   daphnite           Fe5Al(AlSi3)O10(OH)8               *
+ *  4: amph-hbl   hornblende         Ca2(Mg,Fe,Al)5(Al,Si)8O22(OH)2     *
+ *  5: amph-trem  tremolite          Ca2Mg5Si8O22(OH)2                  *
+ *  6: amph-fact  ferro-actinolite   Ca2Fe5Si8O22(OH)2                  *
+ *  7: amph-parg  pargasite          NaCa2Mg4Al(Al2Si6)O22(OH)2         *
+ *  8: cpx-di     diopside           CaMgSi2O6                          *
+ *  9: cpx-hd     hedenbergite       CaFeSi2O6                          *
+ * 10: cpx-jd     jadite             NaAlSi2O6                          *
+ * 11: opx-en     enstatite          MgSiO3                             *
+ * 12: opx-fs     ferrosillite       FeSiO3                             *
+ * 13: ol-fo      forsterite         MgSiO4                             *
+ * 14: ol-fa      fayalite           FeSiO4                             *
+ * 15: sp-sp      spinel             MgAl2O4                            *
+ * 16: sp-mt      magnetite          Fe3O4                              *
+ * 17: gt-py      pyrope             Mg3Al2Si3O12                       *
+ * 18: gt-al      almandine          Fe3Al2Si3O12                       *
+ * 19: gt-gr      grossular          Ca3Al2Si3O12                       *
+ * 20: gt-spess   spessartine        Mn3Al2Si3O12                       *
+ * 21: qtz-aqz    alpha-quartz       SiO2                               *
+ * 22: qtz-bqz    beta-quartz        SiO2                               *
+ * 23: or-or      orthoclase         KAlSi3O8                           *
+ * 24: or-san     sanadine           KAlSi3O8                           *
+ * 25: musc-ms    muscovite          KAl3Si3O10(OH)2                    *
+ * 25: musc-pg    paragonite         NaAl3Si3O10(OH)2                   *
+ * 26: bt-ann     annite             KFe3AlSi3O10(F,OH)2                *
+ * 27: bt-phlog   phlogopite         KMg3AlSi3O10(F,OH)2                *
+ * 28: pyx-wo     wolastonite        CaSiO3                             *
+ * 29: carb-cc    calcite            CaCO3                              *
+ * 30: carb-arag  aragonite          CaCO3                              *
+ * 31: carb-do    dolomite           CaMg(CO3)2                         *
+ * 32: ox-rut     rutile             TiO2                               *
+ * 33: sp-herc    hercynite          FeAl2O4                            *
+ * 34: als-and    andalucite         Al2SiO5                            *
+ * 35: als-ky     kyanite            Al2SiO5                            *
+ * 36: als-sil    sillimanite        Al2SiO5                            *
+ * 37: ep-ep      epidote            Ca2FeAl2Si3O12(OH)                 */
+
+/* indicies for each mineral mode [start,end]                           */
+static const int ind[NMODE][2] = {{ 0, 1},  // plag
+                                  { 2, 3},  // chl
+                                  { 4, 7},  // amph
+                                  { 8,10},  // cpx
+                                  {11,12},  // opx
+                                  {13,14},  // ol
+                                  {15,16},  // sp
+                                  {17,20}}; // gt
+
+/* formula weights for minerals in table                                */
+static const double wt[NMIN] = {262.22,  // plag-ab    albite 
+                                278.21,  // plag-an    anorthite 
+                                555.83,  // chl-clin   clinochlore
+                                713.51,  // chl-daph   daphnite
+                                864.7,   // amph-hbl   hornblende
+                                812.41,  // amph-trem  tremolite
+                                970.08,  // amph-fact  ferro-actinolite
+                                835.86,  // amph-parg  pargasite
+                                216.56,  // cpx-di     diopside 
+                                248.10,  // cpx-hd     hedenbergite 
+                                202.14,  // cpx-jd     jadite 
+                                100.40,  // opx-en     enstatite 
+                                131.93,  // opx-fs     ferrosillite 
+                                140.71,  // ol-fo      forsterite 
+                                203.78,  // ol-fa      fayalite 
+                                142.27,  // sp-sp      spinel 
+                                231.54,  // sp-mt      magnetite
+                                403.15,  // gt-py      pyrope 
+                                497.75,  // gt-al      almandine 
+                                450.45,  // gt-gr      grossular 
+                                495.03}; // gt-spess   spessartine 
+                                // qtz-aqz    alpha-quartz
+                                // qtz-bqz    beta-quartz
+                                // or-or      orthoclase
+                                // or-san     sanadine
+                                // musc-ms    muscovite
+                                // musc-pg    paragonite
+                                // bt-annite  annite 
+                                // bt-phlog   phlogopite
+                                // pyx-wo     wolastonite
+                                // carb-cc    calcite
+                                // carb-arag  aragonite
+                                // carb-do    dolomite
+                                // ox-rut     rutile
+                                // sp-herc    hercynite
+                                // als-and    andalucite
+                                // als-ky     kyanite
+                                // als-sil    sillimanite
+                                // ep-ep      epidote
+
+/* Density at P = 0, T = 298 K                                          *
+ * Values from Hacker et al. [JGR, 2004]                                */
+static const double rho298[NMIN] = {2620,  // plag-ab    albite
+                                    2760,  // plag-an    anorthite
+                                    2635,  // chl-clin   clinochlore
+                                    3343,  // chl-daph   daphnite
+                                    3248,  // amph-hbl   hornblende
+                                    2979,  // amph-trem  tremolite
+                                    3430,  // amph-fact  ferro-actinolite
+                                    3074,  // amph-parg  pargasite
+                                    3272,  // cpx-di     diopside
+                                    3651,  // cpx-hd     hedenbergite
+                                    3346,  // cpx-jd     jadite
+                                    3206,  // opx-en     enstatite
+                                    4003,  // opx-fs     ferrosillite
+                                    3222,  // ol-fo      forsterite
+                                    4400,  // ol-fa      fayalite
+                                    3821,  // sp-sp      spinel
+                                    5201,  // sp-mt      magnetite
+                                    3565,  // gt-py      pyrope
+                                    4324,  // gt-al      almandine
+                                    3593,  // gt-gr      grossular
+                                    4194}; // gt-spess   spessartine
+//                                  2648,  // qtz-aqz    alpha-quartz
+//                                  2530,  // qtz-Bqz    beta-quartz
+//                                  2553,  // or-or      orthoclase
+//                                  2555,  // or-san     sanadine
+//                                  2828,  // musc-ms    muscovite
+//                                  2780,  // musc-pg    paragonite   ???
+//                                  3317,  // bt-ann     annite
+//                                  2788,  // bt-phlog   phlogopite
+//                                  2910,  // pyx-wo     wolastonite  ???
+//                                  2713,  // carb-cc    calcite
+//                                  2931,  // carb-arag  aragonite
+//                                  2830,  // carb-do    dolomite     ???
+//                                  4242,  // ox-rut     rutile         24
+//                                  4264,  // sp-herc    hercynite
+//                                  3150,  // als-and    andalucite   ???
+//                                  3670,  // als-ky     kyanite
+//                                  3249,  // als-sil    sillimanite
+//                                  3498,  // ep-ep      epidote
+ 
+/* Expansivity coefficients Fei [AGU, Handbook of Physical Constants,   *
+ * 1995], functional form:                                              *
+ *    alpha = a0 + a1*T + a2*T^-2                                       *
+ *                                                                      *
+ *    a0          a1          a2        Mineral               Note/Ref  */
+static const double a[NMIN][3] = {
+   {1.9801e-5,  1.0065e-8, -0.9760}, // plag-ab    albite
+   {1.2491e-5, -0.0162e-8,  0.0161}, // plag-an    anorthite
+   {2.5000e-5,  0,          0     }, // chl-clin   clinochlore   16
+   {2.5000e-5,  0,          0     }, // chl-daph   daphnite      16
+   {2.0750e-5,  1.0270e-8,  0     }, // amph-hbl   hornblende    
+   {3.1310e-5,  0,          0     }, // amph-trem  tremolite
+   {3.1310e-5,  0,          0     }, // amph-fact  ferro-actinolite
+   {3.1310e-5,  0,          0     }, // amph-parg  pargasite
+   {3.3300e-5,  0,          0     }, // cpx-di     diopside
+   {2.9800e-5,  0,          0     }, // cpx-hd     hedenbergite
+   {2.4700e-5,  0,          0     }, // cpx-jd     jadite
+   {2.9720e-5,  0.5711e-8,  0     }, // opx-en     enstatite      1
+   {2.8750e-5,  0,          0     }, // opx-fs     ferrosillite   2
+   {2.8540e-5,  1.0080e-8, -0.3842}, // ol-fo      forsterite
+   {2.3860e-5,  1.1530e-8, -0.0518}, // ol-fa      fayalite
+   {1.9600e-5,  1.6400e-8,  0     }, // sp-sp      spinel         3
+   {3.6775e-5,  1.2225e-8, -1.0268}, // sp-mt      magnetite     10
+   {2.3110e-5,  0.5956e-8, -0.4538}, // gt-py      pyrope
+   {1.7760e-5,  1.2140e-8, -0.5071}, // gt-al      almandine
+   {1.9510e-5,  0.8089e-8, -0.4972}, // gt-gr      grossular
+   {2.9270e-5,  0.2726e-8, -1.1560}};// gt-spess   spessartine
+// {1.4170e-5,  9.6581e-8, -1.6973}, // qtz-aqz    alpha-quartz
+// {-0.440e-5,  0,          0     }, // qtz-bqz    beta-quartz
+// {3.4000e-5,  0,          0     }, // or-or      orthoclase    19
+// {3.4000e-5,  0,          0     }, // or-san     sanadine      19
+// {3.5370e-5,  0,          0     }, // musc-ms    muscovite
+// {3.5370e-5,  0,          0     }, // musc-pg    paragonite
+// {3.7000e-5,  0,          0     }, // bt-ann     annite        18
+// {5.8000e-5,  0,          0     }, // bt-phlog   phlogopite    19
+// {2.4740e-5,  1.0096e-8,  0     }, // pyx-wo     wolastonite
+// {0.7130e-5,  3.3941e-8, -1.2140}, // carb-cc    calcite
+// {6.2210e-5,  0,          0     }, // carb-arag  aragonite
+// {1.9280e-5,  3.1703e-8, -0.5393}, // carb-do    dolomite
+// {1.6230e-5,  1.6371e-8, -0.4799}, // ox-rut     rutile        24
+// {0.9700e-5,  1.9392e-8,  0     }, // sp-herc    hercynite
+// {2.1810e-5,  0.3261e-8,  0     }, // als-and    andalucite
+// {2.5050e-5,  0,          0     }, // als-ky     kyanite
+// {1.2600e-5,  0.2314e-8,  0     }, // als-sil    sillimanite
+// {5.1000e-5,  0,          0     }, // ep-ep      epidote       19
+
+
+
+/* Elastic constants from Hacker et al. [JGR, 2003] and references      *
+ * therein (unless noted otherwise)                                     *
+ * functional form:                                                     *
+ *    KT = KT,0 + K'*P + 0.5*K''*P^2 + dKs/dT*T                         *
+ *                                                                      *
+ *    KT    K'    K''   dKs/dT                                          */
+static const double K[NMIN][4] = {
+    { 53.8, 6.0, -0.06,   -0.0037},  // plag-ab    albite           8
+    { 82.5, 3.2, -0.05,   -0.0100},  // plag-an    anorthite        8
+    { 85.0, 3.3,  0,      -0.0130},  // chl-clin   clinochlore     16 
+    { 86.9, 4.0,  0,      -0.0130},  // chl-daph   daphnite        16
+    { 94.0, 4.0,  0,       0     },  // amph-hbl   hornblende    
+    { 85,   4.0,  0,       0     },  // amph-trem  tremolite
+    { 76,   4.0,  0,       0     },  // amph-fact  ferro-actinolite
+    { 91.2, 4.0,  0,       0     },  // amph-parg  pargasite
+    {113,   4.8,  0,      -0.0205},  // cpx-di     diopside 
+    {119,   4.0,  0,      -0.0205},  // cpx-hd     hedenbergite 
+    {139,   5.0,  0,      -0.0165},  // cpx-jd     jadite
+    {105.8, 8.5, -1.6,    -0.0370},  // opx-en     enstatite        4
+    {100,   8.8, -1.6,    -0.0370},  // opx-fs     ferrosillite     5
+    {128,   4.2,  0,      -0.0170},  // ol-fo      forsterite      15 
+    {135,   4.2,  0,      -0.0204},  // ol-fa      fayalite        15 
+    {205,   4.1,  0,      -0.0300},  // sp-sp      spinel           7
+    {181,   5.5,  0,       0     },  // sp-mt      magnetite        9
+    {173,   5.0,  0,      -0.0191},  // gt-py      pyrope
+    {174,   6.0,  0,      -0.0204},  // gt-al      almandine 
+    {168,   5.5,  0,      -0.0148},  // gt-gr      grossular 
+    {182,   5.6,  0,      -0.0191}}; // gt-spess   spessartine      6
+//  { 37.1, 5.99, 0,       0     },  // qtz-aqz    alpha-quartz    20
+//  { 57.0, 4.0,  0,       0     },  // qtz-bqz    beta-quartz     20
+//  { 58.3, 4.0,  0,       0     },  // or-or      orthoclase      20
+//  { 67,   4.0,  0,       0     },  // or-san     sanadine        20
+//  { 50,   3.0,  0,       0     },  // musc-ms    muscovite       18
+//  { 60,   2.9,  0,       0     },  // musc-pg    paragonite      27
+//  { 49,   8.1, -0.5047,  0     },  // bt-ann     annite          18
+//  { 54,   7.8, -0.5953,  0     },  // bt-phlog   phlogopite      18
+//  {107,   4.0,  0,       0     },  // pyx-wo     wolastonite     22
+//  { 73.5, 4.0,  0,       0     },  // carb-cc    calcite         20
+//  { 46,   4.0,  0,       0     },  // carb-arag  aragonite       20
+//  { 94,   4.0,  0,       0     },  // carb-do    dolomite        23
+//  {211.3, 6.8,  0,      -0.0500},  // ox-rut     rutile          24
+//  {209,   4.0,  0,       0     },  // sp-herc    hercynite       20
+//  {151,   4.0,  0,       0     },  // als-and    andalucite      25
+//  {156,   5.6,  0,       0     },  // als-ky     kyanite         20
+//  {171,   4.0,  0,       0     },  // als-sil    sillimanite     20
+//  {162,   4.0,  0,       0     },  // ep-ep      epidote         20
+
+/* Gruenesion parameter                                                 *
+ * From Hacker et al. [JGR, 2003]                                       */
+static const double gammaT[NMIN] = {0.60,  // plag-ab    albite
+                                   0.60,   // plag-an    anorthite
+                                   0.30,   // chl-clin   clinochlore    16 
+                                   0.30,   // chl-daph   daphnite       16 
+                                   1.10,   // amph-hbl   hornblende
+                                   0.74,   // amph-trem  tremolite
+                                   0.73,   // amph-fact  ferro-actinolite
+                                   0.84,   // amph-parg  pargasite
+                                   1.00,   // cpx-di     diopside
+                                   1.50,   // cpx-hd     hedenbergite
+                                   1.00,   // cpx-jd     jadite
+                                   1.01,   // opx-en     enstatite       4
+                                   0.88,   // opx-fs     ferrosillite    5
+                                   0.99,   // ol-fo      forsterite     15
+                                   1.06,   // ol-fa      fayalite       15
+                                   1.73,   // sp-sp      spinel          7
+                                   2.00,   // sp-mt      magnetite       9
+                                   1.29,   // gt-py      pyrope
+                                   1.29,   // gt-al      almandine
+                                   1.38,   // gt-gr      grossular
+                                   1.29};  // gt-spess   spessartine     6
+//                                 0.7,    // qtz-aqz    alpha-quartz   21
+//                                 0.1,    // qtz-Bqz    beta-quartz    21
+//                                 0.4,    // or-or      orthoclase     21
+//                                 0.4,    // or-san     sanadine       21
+//                                 0.5,    // musc-ms    muscovite      21
+//                                 0.5,    // musc-pg    paragonite     
+//                                 0.6,    // bt-ann     annite         21
+//                                 0.6,    // bt-phlog   phlogopite     21
+//                                 1.0,    // pyx-wo     wolastonite    26
+//                                 0.7,    // carb-cc    calcite        21
+//                                 1.4,    // carb-arag  aragonite      21
+//                                 0.7     // carb-do    dolomite       26
+//                                 1.62,   // ox-rut     rutile         24
+//                                 1.2,    // sp-herc    hercynite      21
+//                                 1.0,    // als-and    andalucite     26
+//                                 1.0,    // als-ky     kyanite        21
+//                                 0.5,    // als-sil    sillimanite    21
+//                                 1.1,    // ep-ep      epidote        21
+
+/* Anderson-Gruenesion parameter                                        *
+ * From Hacker et al. [JGR, 2003]                                       */
+static const double deltaT[NMIN] = {6.57,   // plag-ab    albite
+                                    3.47,   // plag-an    anorthite
+                                    4.30,   // chl-clin   clinochlore   16 
+                                    4.30,   // chl-daph   daphnite      16 
+                                    5.10,   // amph-hbl   hornblende
+                                    4.74,   // amph-trem  tremolite
+                                    4.73,   // amph-fact  ferro-actinolite
+                                    4.84,   // amph-parg  pargasite
+                                    6.04,   // cpx-di     diopside
+                                    5.21,   // cpx-hd     hedenbergite
+                                    4.99,   // cpx-jd     jadite
+                                    9.39,   // opx-en     enstatite
+                                    9.05,   // opx-fs     ferrosillite   5
+                                    5.19,   // ol-fo      forsterite    15
+                                    5.26,   // ol-fa      fayalite      15
+                                    6.50,   // sp-sp      spinel
+                                    7.45,   // sp-mt      magnetite      9
+                                    5.30,   // gt-py      pyrope
+                                    5.52,   // gt-al      almandine
+                                    4.57,   // gt-gr      grossular
+                                    5.30};  // gt-spess   spessartine    6
+//                                  8.42,   // qtz-aqz    alpha-quartz
+//                                  4.11,   // qtz-Bqz    beta-quartz
+//                                  4.44,   // or-or      orthoclase
+//                                  4.44,   // or-san     sanadine
+//                                  7.42,   // musc-musc  muscovite
+//                                  4.55,   // bt-ann     annite
+//                                  4.55,   // bt-phlog   phlogopite
+//                                          // pyx-wo     wolastonite
+//                                  4.69,   // carb-cc    calcite
+//                                  5.36,   // carb-arag  aragonite
+//                                          // carb-do    dolomite
+//                                  9.54,   // ox-rut     rutile        24
+//                                  5.19,   // sp-herc    hercynite
+//                                          // als-and    andalucite
+//                                  6.56,   // als-ky     kyanite
+//                                  4.5,    // als-sil    sillimanite
+//                                  5.11,   // ep-ep      epidote
+
+/* Fitting parameters                                                   *
+ * functional form:                                                     *
+ *    Cp = k0 + k1*T^-0.5 + k2*T^-2 + k3*T^-3                           */
+static const double c[NMIN][4] = {
+    {1.5012e3,-9.2116e3,-3.0099e7, 4.0829e9},  // plag-ab      14
+    {1.5793e3,-4.7252e3, 0.0000e7,-1.1395e9},  // plag-an      14
+    {2.1726e3,-1.9739e4,-2.9739e6,-1.7267e9},  // chl-clin     10
+    {1.8204e3,-1.8175e4, 6.0436e6,-1.8045e9},  // chl-daph     10
+    {1.6559e3,-1.3126e4, 1.5163e6,-2.6059e9},  // amph-hbl     17,10
+    {1.5725e3,-1.0735e4,-1.1307e7,-4.4652e8},  // amph-trem    10
+    {1.4695e3,-1.2666e4, 9.6112e6,-2.9282e9},  // amph-fact    10
+    {1.6559e3,-1.3126e4, 1.5163e6,-2.6059e9},  // amph-parg    10
+    {1.4103e3,-7.4109e3,-3.3090e7, 4.2567e9},  // cpx-di       12
+    {1.3712e3,-1.0668e4,-3.2729e7,-4.2234e6},  // cpx-hd       13
+    {1.5400e3,-9.9194e3,-2.6468e7, 3.2778e9},  // cpx-jd       12
+    {1.6592e3,-1.1959e4,-2.2616e7, 2.7805e9},  // opx-en       11
+    {1.3204e3,-1.0559e4,-0.3444e7,-0.2858e9},  // opx-fs       11
+    {1.6572e3,-1.2804e4, 0.0000e7,-1.9042e9},  // ol-fo        11
+    {1.2366e3,-0.9882e4, 0.0000e7,-0.3052e9},  // ol-fa        11
+    {1.7197e3,-1.4086e4, 0.0000e7,-0.0000e9},  // sp-sp        11
+    {0.9894e3,-3.0731e3,-2.7896e7, 3.1616e9},  // sp-mt         9
+    {1.4657e3,-0.7012e4,-3.3042e7, 3.1262e9},  // gt-py        11 
+    {1.2485e3,-0.6605e4,-3.0298e7, 4.4437e9},  // gt-al        11
+    {1.1531e3,-1.4008e2,-6.2174e7, 7.7938e9},  // gt-gr        11
+    {1.1660e3,-5.1337e3,-1.7209e7,-3.2699e8}}; // gt-spess     13
+//  {1.8324e3,-2.4564e4, 4.5199e7,-6.5873e9},  // qtz-aqz      20  <844 K
+//  {2.1231e3,-4.3251e4, 5.8982e8,-1.9788e11}, // qtz-Bqz      20  >844 K
+//  {1.4445e3,-9.5303e3,-2.6395e7, 3.6781e9},  // sanidine/orthoclase 10
+//  {1.6680e3,-1.0994e4,-3.6790e7, 5.0614e9},  // muscovite    10
+//  {1.7178e3,-1.0497e4,-5.1422e7, 8.3960e9},  // paragonite   10          
+//  {1.2777e3,-5.6610e3,-4.2813e7, 6.9201e9},  // annite       10
+//  {1.4354e3,-4.0508e3,-6.1280e7, 8.9950e9},  // phlogopite   10
+//  {1.3714e3,-9.2579e3,-8.3273e6, 7.0893e7},  // wollastonite 10
+//  {1.7799e3,-1.7168e4,-7.6997e6, 3.0985e9},  // aragonite    10
+//  {1.6407e3,-1.5161e4, 2.2116e7,-5.1056e9},  // calcite      10
+//  {1.8229e3,-1.5256e4,-1.6736e7, 2.7028e9},  // dolomite     10
+//  {1.3212e3,-1.2919e4, 1.9241e7,-2.6362e9},  // rutile       24
+//  {1.4865e3,-1.1559e4,-1.5953e7, 3.1429e9},  // hercynite    10
+//  {1.5227e3,-8.6527e3,-3.7392e7, 4.1310e9},  // andalusite   10
+//  {1.5202e3,-8.3661e3,-4.0346e7, 4.4671e9},  // kyanite      10
+//  {1.5316e3,-9.2260e3,-3.5281e7, 4.3266e9},  // sillimanite  10
+//  {1.3648e3,-9.1880e3, 9.0280e6,-5.2110e9},  // Mg-epidote   10
+//  {1.3009e3,-7.6344e3, 8.5799e6,-6.2503e9}}; // Fe-epidote   10
+
+/* Conductivity References:                                         *
+ *  1 value from Harrell [U. WA, Ph.D. Thesis, 2002]                *
+ *  2 from Xu et al. [PEPI, 2004]                                   *
+ *  3 fit to model for augite rather than diopside by Hofmeister    *
+ *    & Pertermann [Eur. J. Mineral., 2008] because their values    *
+ *    for diopside seem unrealistically high, especially at low     *
+ *    temperatures                                                  *
+ *  4 determined from 2nd order fit to data in Geisting &           *
+ *    Hofmeister [Phys.  Rev. B, 2002]                              *
+ *  5 fit to data in Hofmeister [Am. Mineral., 2001]                *
+ *  6 fit to data in Petrunin et al. [Izvestiya, 2004]              *
+ *  7 fit to thermal diffusivity in Hofmeister [Am. Mineral., 2007] *
+ *    using heat capacity and density (thermal expansion) from      *
+ *    Holland and Powell [J. Metamorph. Petrol., 1998]              *
+ *  8 mean of values from Harrell [U. WA, Ph.D. Thesis, 2002],      *
+ *    Horai [JGR, 1971], and Diment [USGS, OFR, 1989] for augite    * 
+ *    and diopside                                                  *
+ *  9 mean of values from Clauser and Hunges [1995] and references  *
+ *    therein                                                       *
+ * 10 mean of amphiboles from Diment & Pratt [USGS OFR, 1988] and   *
+ *    Horai [JGR, 1971]                                             */
+
+/* conductivity at 298 K */
+static const double lambda298[NMODE] = {1.98,  // plag-an       6
+                                        4.35,  // chl-chl       9
+                                        3.34,  // amph mean    10
+                                        4.25,  // cpx-di        8
+                                        3.37,  // opx-en        1
+                                        4.51,  // ol-fo         2
+                                       11.94,  // sp-sp         5
+                                        5.99}; // gt-py         4
+//                                     // qtz-aqz    alpha-quartz
+//                                     // qtz-bqz    beta-quartz
+//                                     // or-or      orthoclase
+//                                     // or-san     sanadine
+//                                     // mica-musc  muscovite
+//                                     // mica-ann   annite
+//                                     // mica-phlog phlogopite
+//                                     // pyx-wo     wolastonite
+//                                     // carb-cc    calcite
+//                                     // carb-arag  aragonite
+//                                     // carb-do    dolomite
+//                                     // ox-rut     rutile
+//                                     // sp-herc    hercynite
+//                                     // als-and    andalucite
+//                                     // als-ky     kyanite
+//                                     // als-sil    sillimanite
+//                                     // ep-ep      epidote
+
+/* amphibole parameters */
+//A = {{0,2,3,1,2,7},
+//     {0,2,5,0,0,8},
+//     {0,2,0,5,0,8},
+//     {1,2,4,0,3,6}};
+//m = {-0.1760, 0.2008, 0.1070, 0.0506, -0.4312, 0.3911};
+static const double kamph[4] = {2.6485, 4.0654, 3.7834, 1.7066};  /* A*m */
+
+
+/* temperature exponent */
+static const double n[NMODE] = {-0.21,  // plag-an       6
+                                 0.50,  // chl-clin      8
+                                 0.50,  // amph-trem     8
+                                 0.54,  // cpx-di        3
+                                 0.30,  // opx-en        1
+                                 0.49,  // ol-fo         2
+                                 1.24,  // sp-sp         5
+                                 0.37}; // gt-py         4
+
+/* Exponent references                                              *
+ * 1 determined in a fit to Harrell [Ph.D. Thesis, Univ. Wash.,     *
+ *   2002]                                                          *
+ * 2 from Xu et al. [PEPI, 2004]                                    *
+ * 3 fit to data in Hofmeister & Pertermann [Eur. J. Mineral.,      *
+ *   2008]                                                          *
+ * 4 fit to data in Osako et al. [PEPI, 2004]                       *
+ * 5 fit to data in Hofmeister [Am. Mineral., 2001]                 *
+ * 6 fit to data in Petrunin et al. [Izvestiya, 2004]               *
+ * 7 see 7 above                                                    *
+ * 8 etimated.                                                      */
+
+/* Fitting constants */
+//                                                             X     0     1
+static const double k[NMODE][3] = {{2.1988,-2.1787,1.9001}, // plag  ab    an
+                                   {4.35,   0.0000,0.0000}, // *chl  clin  daph
+                                   {3.34,   0.0000,0.0000}, // ^amph 
+                                   {4.25,   0.0000,0.0000}, // *cpx  hd    di
+                                   {3.37,   0.0000,0.0000}, // *opx  fs    en
+                                   {3.0914,-1.1724,3.3489}, // ol    fa    fo
+                                   {5.4700, 6.4700,0.0000}, // +sp   mt    sp
+                                   {4.9661,-7.4162,8.4495}};// ~gt   al    py
+
+/* *not enough data/range of compositions analyized to make an          *
+ *  accurate assessment of mixtures.  Hence averages of measured        *
+ *  values are used for these phases. The values here are k298 values   *
+ *  from Harrell [U. WA, Ph.D. Thesis, 2002] for opx and cpx.  The      *
+ *  values are not end-member compositions and are both significantly   *
+ *  lower than average values of En(86-100): 4.23 W/m/K [Horai, JGR,    *
+ *  1971] and Di: 5.16 W/m/K Hofmeister & Pertermann [Eur. J. Mineral., *
+ *  2008] actually for their augite.                                    *
+ * ^amphiboles are treated specially because they are a complex series  *
+ *  solution with multiple numerous cation and anion substitutions      *
+ * +mixture of Al-spinel (X = 1) with magnetite (X = 0)                 *
+ * ~Gr and Spess not included                                           */
+
+
+/* COMPUTEDENSITY */
+void computedensity(double P, double T, double mf[], double *rho, double *alpha) {
+
+    double alphaPT[NMIN],rhoPT[NMIN];
+    double w[NMODE],vmode[NMODE];
+
+    modefrac(mf,w);
+
+    /* density and thermal expansion of minerals */
+    densityPT(P,T,mf,alphaPT,rhoPT);
+
+    /* rock expansivity */
+    modevalue(alphaPT,mf,vmode);
+    *alpha = wtmean(w,vmode);
+
+    /* rock density */
+    modevalue(rhoPT,mf,vmode);
+    *rho = wtmean(w,vmode);
+}
+
+
+/* COMPUTEHEATCAP */
+void computeheatcap(double P, double T, double mf[], double *Cp) {
+
+    double alphaPT[NMIN],rhoPT[NMIN];
+    double CpPT[NMIN];
+    double w[NMODE],vmode[NMODE];
+
+    modefrac(mf,w);
+
+    /* compute mineral heat capacity */
+    densityPT(P,T,mf,alphaPT,rhoPT);
+    heatcap(P,T,mf,alphaPT,rhoPT,CpPT);
+
+    /* compute rock heat capacity */
+    modevalue(CpPT,mf,vmode);
+    *Cp = wtmean(w,vmode);
+}
+
+
+/* COMPUTETHERMCOND */
+void computethermcond(double P, double T, double mf[], double *lambda) {
+
+    int i;
+    double lambda_lat[NMODE],lambda_rad;
+    double lambda_eff[NMODE];
+    double w[NMODE];
+
+    modefrac(mf,w);
+
+    /* compute mode conductivity */
+    thermcond(P,T,mf,lambda_lat,&lambda_rad);
+
+    /* compute rock conductivity */
+
+    /* Note: radiative conductivity                                     *
+     *                                                                  *
+     * A radiative component is only added to ol, and px components.    *
+     *                                                                  *
+     * The radiative contribution to thermal conductivity results from  *
+     * blackbody emmissions and how optically transparent a sample is   *
+     * to various wavelengths of light.  A few studies have been done   *
+     * on olivine and few on other mantle phases (En Schatz & Simmons   *
+     * [JGR, 1972]).  However the radiative conductivity for pyroxene   *
+     * may be very similar to olivine [Hofmeister & Pertermann, Eur.    *
+     * J. Mineral., 2008]                                               *
+     *                                                                  *
+     * Garnet and spinel may not contribute to radiative conductivity,  *
+     * so the true radiative conductivity should probably be reduced    *
+     * by a fraction proportional to the mode fraction [Tom Shankland,  *
+     * pers. comm.].                                                    */
+
+    for (i = 0; i < NMODE; i++) {
+        if ((i == 3 || i == 4 || i == 5) && w[i] > 0) {
+            lambda_eff[i] = lambda_lat[i] + lambda_rad;
+            continue;
+        }
+        lambda_eff[i] = lambda_lat[i];
+    }
+    *lambda = geomean(w,lambda_eff);
+
+    /* if lambda_rad should be added to all components */
+    //*lambda = geomean(w,lambda_lat) + lambda_rad;
+
+    /* debugging... */
+    //if (P == 0 && mf[17] + mf[18] + mf[19] + mf[20] != 0) {
+    //    printf("%lg %lg %lg %lg %7.4lf  %lg %7.4lf\n",
+    //        mf[17],mf[18],mf[19],mf[20],
+    //        (lambda_lat[NMODE-1]+lambda_rad),w[7],*lambda);
+    //}
+} /* THERMCOND */
+
+
+
+/* DENSITYPT - Computes P-T-dependent properties of several minerals.   *
+ *                                                                      *
+ *    int DENSITYPT(double P, double T,                                 *
+ *    double *RHO, double *ALPHA, double *Cp) computes the density,     *
+ *    RHO, thermal expansivity, ALPHA; and specific heat capacity, Cp   *
+ *    of several mantle minerals with respect to pressure, P, and       *
+ *    temperature, T.                                                   *
+ *                                                                      *
+ * See THERMEXP and COMPRESS for the approximations of the P, T         *
+ * dependence and resulting integral solutions.                         *
+ *                                                                      *
+ * Last modified: 27-Feb 2009 by D. Hasterok                            */
+void densityPT(double P, double T, double mf[], double *alphaPT, double *rhoPT) {
+
+    int i;
+    double alphaT[NMIN], ialphaT[NMIN];
+    double rhoP;
+
+    /* thermal expansivity */
+    thermexp(T,alphaT);
+    ithermexp(T,ialphaT);
+    /* debugging */
+    //for (i = 0; i < NMIN; i++) {
+    //    fprintf(stdout,"mode %i:  %lg  %lg\n",i,alphaT[i],ialphaT[i]);
+    //}
+    //exit(0);
+
+    for (i = 0; i < NMIN; i++) {
+        if (mf[i] == 0) {
+            alphaPT[i] = 0;
+            rhoPT[i] = 0;
+            continue;
+        }
+        /* Solve for P-dependent density */
+        rhoP = densityP(i, P, rho298[i]);
+
+        alphaPT[i] = alphaT[i] * pow(rhoP/rho298[i], -deltaT[i]);
+
+        /* Compute P-T-dependent density and expansivity */
+        rhoPT[i] = rhoP*exp(-ialphaT[i]);
+       // fprintf(stdout,"%lg %lg\n",alphaPT[i],rhoPT[i]);
+    }
+} /* DENSITYPT */
+
+
+
+/* DENSITYP - Computes the pressure dependent density.                  *
+ *                                                                      *
+ *    double DENSITYP(double P, double rho0, double KT, double Kp)      *
+ *    computes the pressure dependent density using Newton's method.    *
+ *                                                                      *
+ * Last Modified: 23 Sept 2009 by D. Hasterok                           */
+double densityP(int i, double P, double rho0) {
+
+    double tol = 1e-5;          /* tolerance */
+    double count = 1;           /* counter */
+    double maxit = 100;         /* maximum number of iterations */
+    double rho_o,rho_n;
+
+    if (P == 0) {
+        return(rho0);
+    }
+
+    rho_o = rho0*(1 + P/K[i][0]);    // initial guess (1/K[i][1] is compressibility)
+    while (1) {
+        rho_n = rho_o - (P - pressure(i,rho0,rho_o))/(-dpressure(i,rho0,rho_o));
+        /* debugging... */
+        //p = pressure(rho0,rho_old,K[i][1],K[i][2]);
+        //dp = dpressure(rho0,rho_old,K[i][1],K[i][2]);
+    
+        if (fabs(rho_n - rho_o) < tol) {
+            rho_o = rho_n;
+            break;
+        }
+    
+        // printf("%lg %lg, %lg\n",P,rho_o,rho_n);
+        if (count > maxit) {
+            fprintf(stderr,"WARNING (density): Did not converge.\n");
+            exit(0);
+        }
+    
+        rho_o = rho_n;
+        count++;
+    }
+    /* debugging... */
+    //rhoP-rho0
+    return(rho_n);
+} /* DENSITYP */
+
+
+/* Logarithmic Equation of State (EoS)                                  *
+ *                                                                      *
+ * PRESSURE - Logarithmic (EoS).                                        *
+ *                                                                      *
+ *    This logarithmic EoS formulation is from Poirier & Tarantola      *
+ *    [PEPI, 1998] and should be superior to the Birch-Murnaghan        *
+ *    equation of state at high pressures.                              *
+ *                                                                      *
+ * Last Modified: 22 Sept 2009 by D. Hasterok                           */
+double pressure(int i, double rho0, double rhoP) {
+
+    double lnrho;
+    double p;
+
+    lnrho = log(rhoP/rho0);
+
+    p = K[i][0]*(rhoP/rho0)*lnrho*(1 + 0.5*(K[i][1] - 2)*lnrho);
+
+    return(p);
+} /* FUNC */
+
+
+
+/* DPRESSURE - Derivative of Logarithmic EoS.                           *
+ *                                                                      *
+ * Last Modified: 27-Feb 2009 by D. Hasterok                            */
+double dpressure(int i, double rho0, double rhoP) {
+
+    double lnrho;
+    double dp;
+
+    //double zeta;
+    //zeta = 0.5*(K[i][1] - 2);
+    lnrho = log(rhoP/rho0);
+
+    //dp = K[i][0]/rho0*((1 + lnrho)*(1 + zeta*lnrho) + zeta*lnrho);
+    dp = K[i][0]/rho0*(1 + K[i][1]*lnrho*(1 + 0.5*lnrho));
+
+    return(dp);
+} /* DFUNC */
+
+
+
+/* Thermal Expansion - The next three functions compute the temperature *
+ * dependent thermal expansion, and its derivative and integral.        *
+ *                                                                      *
+ * THERMEXP - Temperature dependent thermal expansivity.                *
+ *                                                                      *
+ *    double *THERMEXP(double T) computes the thermal conductivity for  *
+ *    the several minerals given the temperature, T in [K].             *
+ *                                                                      *
+ * ITHERMEXP - Integral of thermal expansivity w.r.t. temperature.      *
+ *                                                                      *
+ *    double *ITHERMEXP(double T) computes the integral of thermal      *
+ *    expansivity as a function of temperature for the several          *
+ *    minerals given the temperature, T in [K].                         *
+ *                                                                      *
+ * DTHERMEXP - Temperature derivative of thermal expansivity.           *
+ *                                                                      *
+ *    double *THERMEXP(double T) computes the derivative of thermal     *
+ *    expansivity w.r.t. temperature for several minerals given the     *
+ *    temperature, T in [K].                                            *
+ *                                                                      *
+ * Last modified: 22 Sept 2009 by D. Hasterok                           */
+/* thermal expansivity */
+void thermexp(double T, double *alpha) {
+    
+    int i;
+    
+    for (i = 0; i < NMIN; i++) {
+        alpha[i] = a[i][0] 
+            + T*a[i][1] 
+            + a[i][2]/(T*T);
+    }
+} /* THERMEXP */
+
+/* integral of expansivity */
+void ithermexp(double T, double *ialpha) {
+    
+    const double Tref = 293;
+    int i;
+    
+    for (i = 0; i < NMIN; i++) {
+        ialpha[i] = (T - Tref)*a[i][0] 
+            + 0.5*(T*T - Tref*Tref)*a[i][1] 
+            - (1/T - 1/Tref)*a[i][2];
+    }
+} /* ITHERMEXP */
+
+
+
+/* derivative of expansivity */
+void dthermexp(double T, double *dalpha) {
+    
+    int i;
+    
+    for (i = 0; i < NMIN; i++) {
+        dalpha[i] = a[i][1] 
+            - 2/(T*T*T)*a[i][2];
+    }
+} /* DTHERMEXP */
+
+
+
+/* HEATCAP - Computes heat capacity for mantle minerals.                *
+ *                                                                      *     
+ *    Cp = HEATCAP(P,T,C,ALPHA,DALPHAT,RHO) computes the heat capacity  *
+ *    of minerals associated with the density, RHO; expansivity,        *
+ *    ALPHA; temperature derivative of expansivity, DALPHAT; using the  *
+ *    constants in C at the pressure, P, and temperature T.  Note that  *
+ *    T must be in Kelvin and P in GPa.                                 *
+ *                                                                      *
+ * Last modified: 27-Feb 2009 by D. Hasterok                            */
+void heatcap(double P, double T, double mf[], double alpha[], double rho[], double *Cp) {
+
+    int i;
+    double dCp_dP;
+    double dalphaT[NMIN];
+
+    dthermexp(T,dalphaT);
+    for (i = 0; i < NMIN; i++) {
+        if (mf[i] == 0) {
+            Cp[i] = 0;
+            continue;
+        }
+        /* compute the pressure influence on heat capacity see Osako et *
+         * al. [PEPI, 2004], must multiply by 1e9 to convert            *
+         * J/(kg-K-Pa) to J/(kg-K-GPa)                                  */
+        dCp_dP = -T*(alpha[i]*alpha[i] + dalphaT[i])/rho[i]*1e9;
+    
+        /* heat capacity */
+        Cp[i] = c[i][0] + c[i][1]/sqrt(T) + (c[i][2] + c[i][3]/T)/(T*T) + dCp_dP*P;
+    }
+} /* HEATCAP */
+
+
+
+/* PHASEFRAC - Fraction of each mineral phases nomalized by mode.       */
+void phasefrac(double mf[], double *X) {
+
+    int i,j;
+    double s = 0;
+
+    for (i = 0; i < NMODE; i++) {
+        s = 0;
+        for (j = ind[i][0]; j <= ind[i][1]; j++) {
+            s += mf[j];  /* sum of weighted modes */
+        }
+
+        for (j = ind[i][0]; j <= ind[i][1]; j++) {
+            if (s == 0) { X[j] = 0; continue; };
+            X[j] = mf[j]/s;  /* sum of weighted modes */
+        }
+    }
+    /* debugging */
+    //for (i = 0; i < NMIN; i++) {
+    //    fprintf(stdout,"%lg  ",X[i]);
+    //}
+    //fprintf(stdout,"\n");
+} /* PHASEFRAC */
+
+
+/* BVALUE - Pressure term for computing thermal conducivity.            */
+void bvalue(double mf[], double *b) {
+
+    int i,j;
+    double X[NMIN];
+
+    phasefrac(mf,X);
+
+    for (i = 0; i < NMODE; i++) {
+        //printf("%lg \n",X[i]);
+        b[i] = 0;
+        for (j = ind[i][0]; j <= ind[i][1]; j++) {
+            b[i] += X[j]*K[j][1]/K[j][0];  /* sum of weighted modes */
+        }
+    }
+    /* debugging */
+    //for (i = 0; i < NMODE; i++) {
+    //    fprintf(stdout,"%6.4lf ",b[i]);
+    //}
+    //fprintf(stdout,"\n");
+} /* BVALUE */
+
+
+
+/* CONDCONST */
+void condconst(double mf[], double *lambda0) {
+
+    int i;
+    double X[NMODE];
+
+    /* compute mole fraction of each mode end-member. This is   *
+     * different from the actual phase fraction because of the  *
+     * sparce data on end-member thermal conductivities.  As    *
+     * data are added this section will likely need updating.   */
+
+    /* plagioclase      ab/(an + ab)                            */
+    if (mf[0] + mf[1] != 0) { X[0] = mf[1]/(mf[0] + mf[1]); }
+    else { X[0] = 1; }
+
+    /* chlorite         clin/(clin + daph)                      */
+    if (mf[2] + mf[3] != 0) { X[1] = mf[2]/(mf[2] + mf[3]); }
+    else { X[4] = 1; }
+
+    /* amphibolite      hbl/(hbl + trem + fact + parg)          *
+     * special case... see below.                               */
+    X[2] = 1;
+
+    /* clinopyroxene    di/(di + hd + jd)                       */
+    if (mf[8] + mf[9] + mf[10] != 0) { X[4] = mf[8]/(mf[8] + mf[9] + mf[10]); }
+    else { X[3] = 1; }
+
+    /* orthopyroxene    en/(en + fs)                            */
+    if (mf[11] + mf[12] != 0) { X[4] = mf[11]/(mf[11] + mf[12]); }
+    else { X[4] = 1; }
+
+    /* olivine          fo/(fo + fa)                            */
+    if (mf[13] + mf[14] != 0) { X[5] = mf[13]/(mf[13] + mf[14]); }
+    else { X[5] = 1; }
+
+    /* spinel           sp/(sp + mt)                            */
+    if (mf[15] + mf[16] != 0) { X[6] = mf[15]/(mf[15] + mf[16]); }
+    else { X[6] = 1; }
+
+    /* garnet           (py + gr)/(py + al + gr + spess)        *
+     *                                                          *
+     * Note: 13-Oct 2009                                        *
+     *                                                          *
+     * While there are few measurements to make an accurate     *
+     * assessment, gr is assumed ~= py and spess ~= al because  *
+     * of the relative similarity in substituted cation size.   */
+    if (mf[17] + mf[18] + mf[19] + mf[20] != 0) { 
+        X[7] = (mf[17] + mf[19])/(mf[17] + mf[18] + mf[19] + mf[20]);
+    } else { X[7] = 1; }
+
+    /* Compute the STP conductivity as a function of end-member *
+     * fraction                                                 */
+    for (i = 0; i < NMODE; i++) {
+        lambda0[i] = k[i][0] + X[i]*(k[i][1] + X[i]*k[i][2]);
+    }
+
+    /* amphibole coefficients based on inversion of amphibole   *
+     * conductivities.                                          */
+    if ((mf[4] + mf[5] + mf[6] + mf[7]) != 0) {
+        lambda0[2] = (kamph[0]*mf[4] + kamph[1]*mf[5]
+            + kamph[2]*mf[6] + kamph[3]*mf[7])
+            / (mf[4] + mf[5] + mf[6] + mf[7]);
+    } else {
+        lambda0[2] = lambda298[2];
+    }
+
+    /* debugging */
+    //for (i = 0; i < NMODE; i++) {
+    //    fprintf(stdout,"%lg  ",lambda0[i]);
+    //}
+    //fprintf(stdout,"\n");
+}
+
+
+
+
+/* THERMCOND - Thermal conductivity of mantle phases.                   *
+ *                                                                      *
+ * Inputs:                                                              *
+ *     type     -1: derivative, 0: conductivity, 1: integral            *
+ *     P        pressure                                                *
+ *     T        temperature                                             *
+ *     mf[]     mole fractions                                          *
+ *                                                                      *
+ * Outputs:                                                             *
+ *     val      returned value, type                                    *
+ *                                                                      *
+ * [KLAT,KRAD] = THERMCOND(P,T) computes the thermal conductivity of    *
+ * mantle phases for ol, opx, cpx, sp, and gt given the pressure, P,    *
+ * and temperature, T.  Temperature must be in Kelvin and pressure in   *
+ * GPa.  The effective thermal conductivity is the sum of the lattace   *
+ * conductivity, KLAT, and radiative conductivity, KRAD.                *
+ *                                                                      *
+ * KRAD is only computed for olivine and should be similar for          *
+ * pyroxenes and much smaller for garnet.                               *
+ *                                                                      *
+ * Last modified: 19-Feb 2009 by D. Hasterok                            */
+int thermcond(double P, double T, double mf[], double *lambda_lat, double *lambda_rad) {
+
+    int i;
+    double b[NMODE],lambda0[NMODE];
+
+    bvalue(mf,b);
+    condconst(mf,lambda0);
+    //for (i = 0; i < NMODE; i++) {
+    //    fprintf(stdout,"k298: %6.4lf   b: %6.4lf\n",lambda0[i],b[i]);
+    //}
+
+    /* b-values: Fo90     ~0.032 from Xu et al. [PEPI, 2001]            *
+     *           Al75Py25 ~0.045 from Osako et al. [PEPI, 2004]         *
+     *                                                                  *
+     * Hofmeister & Pertermann [Eur. J. Mineral., 2008] suggests that   *
+     * the type of experiment performed by Osako et al. may             *
+     * artificially inflate the pressure dependence.                    *
+     *                                                                  *
+     * Lattace thermal conductivity                                     *
+     * ----------------------------                                     *
+     * Note that Hofmeister [Science, 1999] mathmatically represents    *
+     * the thermal conductivity with an additional term,                *
+     * exp(1/3 + 4*gammaT int(alpha dT)).  However, she also assumes    *
+     * that the value of a is 0.33 for all silicates.  Since I am       *
+     * using a value for a that fits the temperature dependent          *
+     * conductivity data, the extra term is unnecessary (? I think).    *
+     *                                                                  *
+     * I am using the pressure term from Hofmeister [Science, 1999]     *
+     * and the temperature dependence model from Xu et al. [PEPI,       *
+     * 2004].  Xu suggests that the exponent is likely 0.5 for olivine  *
+     * and may be for other minerals as well.  Although my fits show    *
+     * that they can range between 0.56 and 0.3 for mantle minerals     *
+     * and is actually -0.21 for plagioclase.                           *
+     *                                                                  *
+     * Since solid solutions of mineral do not mix linearly, it is      *
+     * more useful to compute the mode immediately rather than compute  *
+     * each mineral independent of each other.                          *
+     *                                                                  *
+     * The exact formula that I am using is:                            *
+     *                                                                  *
+     *                                (298)^n       K'                  *
+     *    klat = (k0 + k1*X + k2*X^2) (---)  (1 + P*--)                 *
+     *                                ( T )         KT                  *
+     *                                                                  *
+     * where klat is the lattice contribution to thermal conductivity,  *
+     * k0-2 are constants used to determine the thermal conductivity    *
+     * of a mixture at 298 K, k298; X is the mole fraction of the mode  *
+     * end-member; P is pressure, and KT and K' are the isothermal      *
+     * bulk modulus and its first pressure derivative.  If the mixing   *
+     * constants are unknown, then a linear combination is assumed.     */
+
+    /* If pressure dependence is to be ignored, uncomment line below */
+    //b = zeros(size(k_298));
+    for (i = 0; i < NMODE; i++) {
+        lambda_lat[i] = lambda0[i]*pow(298/T,n[i])*(1 + b[i]*P);
+    }
+
+    /* radiative thermal conductivity from Hofmeister [1999]            */
+    *lambda_rad = 1.753e-2 + T*(-1.0365e-4 + T*(2.2451e-7 - 3.407e-11*T));
+
+    //if (P == 0 && mf[17] + mf[18] + mf[19] + mf[20] != 0) {
+    //    printf("%lg %lg %lg %lg %7.4lf\n",mf[17],mf[18],mf[19],mf[20],lambda_lat[NMODE-1]+(*lambda_rad));
+    //}
+
+    /* debugging... */
+    //for (i = 0; i < NMODE; i++) {
+    //    fprintf(stdout,"%6.4lf   ",lambda_lat[i]);
+    //}
+    //fprintf(stdout,"%6.4lf\n",*lambda_rad);
+
+    return(0);
+}
+
+
+
+/* ITHERMCOND - Integral of thermal conductivity.                       */
+void ithermcond(double P, double T, double mf[], double *G) {
+
+    int i;
+    int Tref = 273;                  /* [K] reference temperature */
+    double b[NMODE],lambda0[NMODE];
+    double a = 0, g = 0;
+    double w[NMODE];
+    double Glat,Grad;
+
+    bvalue(mf,b);
+    condconst(mf,lambda0);
+
+    // Conductivity integral
+    modefrac(mf,w);
+
+    for (i = 0; i < NMODE; i++) {
+        a = a - n[i]*mf[i];
+        g = g*pow(lambda0[i]*pow(298,n[i])*(1 + b[i]*P),w[i]);
+
+        /* Integral of klat */
+        if (a != -1) {
+            Glat = g*(pow(T,a + 1) - pow(Tref,a + 1))/(a + 1);
+        } else {
+            Glat = g*(log(T) - log(Tref));
+        }
+    
+        /* Integral of krad */
+        Grad = T*(1.753e-2 - T*(1.0365e-4*0.5*T + T*(2.2451e-7/3 - T*3.407e-11*0.25)))
+               - (Tref*(1.753e-2 - Tref*(1.0365e-4*0.5 + Tref*(2.2451e-7/3 - Tref*3.407e-11*0.25))));
+    
+        G[i] = Glat + Grad;
+    }
+} /* ITHERMCOND */
+
+
+
+/* Dervative of thermal conductivity.                                   */
+void dthermcond(double P, double T, double mf[], double *D) {
+
+    int i;
+    double b[NMODE],*lambda0;
+    double a = 0, g = 0;
+    double w[NMODE];
+    double Dlat,Drad;
+
+    bvalue(mf,b);
+    condconst(mf,lambda0);
+
+    modefrac(mf,w);
+
+    for (i = 0; i < NMODE; i++) {
+        a = a - n[i]*mf[i];
+        g = g*pow(lambda0[i]*pow(298,n[i])*(1 + b[i]*P),w[i]);
+
+        /* Derivative of klat */
+        Dlat = a*g*pow(T,a - 1);
+    
+        /* Derivative of krad */
+        Drad = -1.0365e-4 + T*(4.4902e-7 - T*10.221e-11);
+    
+        D[i] = Dlat + Drad;
+     }
+} /* DTHERMCOND */
+
+
+
+/* SP2GT - Spinel to Garnet transition.                                 *
+ *                                                                      *
+ *    double SP2GT(double T) computes the pressure, P, of the spinel    *
+ *    to garnet transition given the temperature, T in Kelvins.         *
+ *                                                                      *
+ *    This boundary is estimated from an inversion of the data in       *
+ *    Robinson and Wood [EPSL, 1998], Walter et al. [GCA, 2002], and    *
+ *    Klemme and O'Neill [Contrib. Mineral. Pet., 2000a].               *
+ *                                                                      *
+ * Last modified: 22-Sept 2009 by D. Hasterok                           */
+double sp2gt(double T) {
+
+    double P;
+
+    //P = 1.3783 + exp(3.6825e-3*T - 6.3009); /* unweighted inversion result */
+    P = 1.4209 + exp(3.9073e-3*T - 6.8041);   /* weighted inversion result   */
+
+    return(P);
+} /* SP2GT */
+
+
+
+/* MODEVALUE - Computes mode average.                                   *
+ *                                                                      *
+ *    double *MODEVALUE(double VMIN[NMIN],double MR[NMIN]) computes     *
+ *    the average mode value, VMODE[NMODE], for a given property for    *
+ *    minerals associated with the properties, VMIN, for the phases     *
+ *    plag, ol, opx, cpx, sp and gt with molar fractions, MF.           *
+ *                                                                      *
+ *    If a particular mineral is not needed the column must still be    *
+ *    included, but can be any value.                                   *
+ *                                                                      *
+ *    Note chromite, rutile and quartz and micas should be added for    *
+ *    a more complete modeling of igneous rocks.                        *
+ *                                                                      *
+ *    Output modes:                                                     *
+ *                                                                      *
+ *       1: plag         Plagioclase                                    *
+ *       2: chl          Chlorite                                       *
+ *       3: amph         Amphibole                                      *
+ *       4: cpx          Clinopyroxene                                  *
+ *       5: opx          Orthopyroxene                                  *
+ *       6: ol           Olivine                                        *
+ *       7: sp           Spinel                                         *
+ *       8: gt           Garnet                                         *
+ *                                                                      *
+ * Last modified: 22-Sept 2009 by D. Hasterok                            */
+void modevalue(double vmin[], double mf[], double *vmode) {
+
+    int i,j;
+    double s;
+
+    for (i = 0; i < NMODE; i++) {
+        vmode[i] = 0;
+        s = 0;
+        for (j = ind[i][0]; j <= ind[i][1]; j++) {
+            s += mf[j];                 /* sum of weights */
+            vmode[i] += vmin[j]*mf[j];  /* sum of weighted modes */
+        }
+
+        /* if all mole fractions are 0, then set mode value to 0 */
+        if (s == 0) {
+            vmode[i] = 0;
+            continue;
+        }
+
+        /* divide by sum of weights */
+        vmode[i] = vmode[i]/s;
+    }
+
+    /* debugging */
+    //fprintf(stdout,"mode value:\n");
+    //for (i = 0; i < NMODE; i++) {
+    //    fprintf(stdout,"mode %i: %lg\n",i,vmode[i]);
+    //}
+} /* MODEVALUE */
+
+
+
+/* MODEFRAC - Computes the mode fractions.                              */
+void modefrac(double mf[], double *w) {
+
+    int i,j;
+    double s = 0;
+
+    for (i = 0; i < NMIN; i++) {
+        s += mf[i];
+    }
+
+    for (i = 0; i < NMODE; i++) {
+        w[i] = 0;
+        for (j = ind[i][0]; j <= ind[i][1]; j++) {
+            w[i] += mf[j];  /* sum of weighted modes */
+        }
+        w[i] = w[i]/s;
+    }
+
+    /* debugging */
+    //fprintf(stdout,"mode fraction:\n");
+    //for (i = 0; i < NMODE; i++) {
+    //    fprintf(stdout,"mode %i: %lg\n",i,w[i]);
+    //}
+} /* MODEFRAC */
+
+
+
+/* CHECKWTS - Checks sum of mode and mineral fractions.                 */
+int checkwts(double mf[]) {
+
+    int i;
+    static double tol = 1e-4;
+    double s = 0;
+
+    /* sum mineral fractions */
+    /* make sure mineral fractions sum to 1 */
+    for (i = 0; i < NMIN; i++) {
+        s += mf[i];
+    }
+
+    if (fabs(s - 1) < tol) {
+        return(1);
+    }
+
+    fprintf(stderr,"Warning (checkwts): Mineral volume fractions sum to %lg.\n",s);
+    return(-1);
+}
+
+
+    
+/* WTMEAN - Computes weighted mean.                                     *
+ *                                                                      *
+ *    double WTMEAN(double W, double VMODE) computes the weighted mean  *
+ *    of the mode properties, VMODE, with weights, W.                   *
+ *                                                                      *
+ * Last Modified: 22 Sept 2009 by D. Hasterok                           */
+double wtmean(double w[], double vmode[]) {
+
+    double m = 0;
+    int i;
+
+    for (i = 0; i < NMODE; i++) {
+        m += w[i]*vmode[i];
+    }
+
+    return(m);
+} /* WTMEAN */
+
+
+
+/* GEOMEAN - Geometric mean                                             *
+ *                                                                      *
+ *    double GEOMEAN(double W, double VMODE) computes the geometric     *
+ *    mean of the mode properties, VMODE, with weights, W.              *
+ *                                                                      *
+ * Last Modified: 22 Sept 2009 by D. Hasterok                           */
+double geomean(double w[], double vmode[]) {
+
+    int i;
+    double S = 0;
+    double W = 0;
+
+    for (i = 0; i < NMODE; i++) {
+        W += w[i];
+        if (w[i] > 0) {
+            S += log(vmode[i])*w[i];
+        }
+    }
+
+    return(exp(S/W));
+} /* GEOMEAN */

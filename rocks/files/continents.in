@@ -1,0 +1,84 @@
+5 0
+
+% crust
+% compositions reasonably match estimates from Rudnick & Gao [Treatise Geochem., 2003]
+% upper crust - (St. Cloud Granodiorite [Hanley et al., 1978])
+% ------------------------
+ 6           % number of minerals
+ 0 27        % min 1
+ 2 15        % min 2
+ 4 32        % min 3
+ 5  8        % min 4
+ 8  5        % min 5
+13 13        % min 6
+
+0
+33 25 300 % max 1100
+41 0.05 0  % max 2
+
+
+% middle crust - (Tonalite J. Bowman pers. comm.)
+% ------------------------
+ 7              % number of minerals
+ 0 15
+ 2  5
+ 4 35
+ 5 20
+13 20
+17  2
+18  3
+
+0
+41 25 300 % max 1300
+41 0.05 0  % max 2
+
+% lower crust - (316I Mafic Granulite Ray et al. [JGR 2006])
+% ------------------------
+10              % number of minerals
+ 0  2
+ 2 10
+ 4 10
+ 5 18
+13 47
+17  1
+18  1
+21  1
+22  1
+29  9
+
+0
+51 25 300 % max 1300
+41 0.05 0  % max 2
+
+
+% mantle 
+% upper mantle - (spinel-lherzolite [])  Mg # 90.6
+% ------------------------
+ 8              % number of minerals
+17  5.66        % min 1 / wt% 1
+18  0.55        % min 2 / wt% 2
+21 19.20        % min 3 / wt% 3
+22  2.43        % min 4 / wt% 4
+23 63.64        % min 5 / wt% 5
+24  5.97        % min 6 / wt% 6
+25  2.03        % min 6 / wt% 7
+27  0.52        % min 6 / wt% 8
+
+0
+57 25 300 % max 1300
+81 0.05 0  % max 8
+
+% lower mantle - (garnet-lherzolite [])  Mg # 90.6
+ 8              % number of minerals
+17  5.47        % min 1 / wt% 1
+18  0.53        % min 2 / wt% 2
+21 15.47        % min 3 / wt% 3
+22  1.53        % min 4 / wt% 4
+23 63.65        % min 5 / wt% 5
+24  3.35        % min 6 / wt% 6
+28  5.58        % min 6 / wt% 7
+29  1.42        % min 6 / wt% 8
+
+0
+57 25 300 % max 1300
+81 0.05 0  % max 8

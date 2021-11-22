@@ -1,0 +1,146 @@
+This file details the use of a set of c-functions to estimate rock properties
+given a mineralogy, which can be incorporated into other modeling codes.
+
+Revised 22 Sept. 2014
+by D. Hasterok
+
+----
+Each mineral is described by a unique code summarized below and is used in the
+input file to "build" the composition of the desired rock.
+
+    Mineral index key
+     0: alpha-quartz      10: Fe-epidote          20: wollastonite        30: grossular
+     1: beta-quartz       11: clinochlore         21: enstatite           31: spessartine
+     2: orthoclase        12: daphnite            22: ferrosillite        32: aragonite
+     3: sanadine          13: hornblende          23: forsterite          33: calcite
+     4: albite            14: tremolite           24: fayalite            34: dolomite
+     5: anorthite         15: ferro-actinolite    25: spinel              35: andalucite
+     6: muscovite         16: pargasite           26: magnetite           36: kyanite
+     7: paragonite        17: diopside            27: hercynite           37: sillimanite
+     8: phlogopite        18: hedenbergite        28: pyrope              38: rutile
+     9: annite            19: jadite              29: almandine
+
+
+----
+Files:
+
+rockprop.c - front end to compute physical properties found in physprop.c
+
+physprop.c - library of functions to compute physical properties
+physprop.h - contains function prototypes and important constants
+
+Makefile - makes executable rockprop
+
+
+----
+Usage:
+    rockprop infile [outfile]
+
+    infile contains the input rock types and desired pressure and temperature
+    conditions to compute the physical properties
+
+    outfile is optional (otherwise prints to stdout) 
+
+
+----
+File formats:
+
+infile:
+    All blank lines or lines starting with '%', or '#' are assumed to be comments
+
+    Line 1:
+        [number of samples] [conductivity type]
+        conductivity types include:
+            -1 - effective, lattice, and radiative as separate columns
+             0 - effective only
+             1 - lattice only
+             2 - radiative only
+
+    Line 2:
+        [number of minerals]
+
+    Line 3+ (next no. minerals lines):
+        [mineral number] [mass fraction/percent]
+        The total mass fraction does not need to sum to 1 as is typical with
+        values reported in publications because they are normalized to 1.
+
+    Line 4: 
+        [condition flag]
+        indicates whether the pressure/temperature conditions to be entered
+        are (0) temperature and pressure steps or (1) specified pressure and
+        temperatures
+
+    If condition flag == 0
+        Line 5: [Number of T steps] [T step (K)] [starting T (K)]
+        Line 6: [Number of P steps] [P step (GPa)] [starting P (GPa)]
+
+    If condition flag == 1
+        Line 5: [Number of P/T steps]
+        Line 6: [P (GPa)] [T (K)]
+        
+
+outfile:
+
+The composition for each rock is presented before the properties, but is
+commented out and the modeled data are presented in columns so that they may be
+easily read into MatLab.  Compositions are reported in mass percent (normalized).
+
+Column 1: pressure [GPa]
+Column 2: temperature [K]
+Column 3: expansivity [K^-1]
+Column 4: density [kg m^-3]
+Column 5: specific heat capacity [J kg^-1 K^-1]
+Column 6: thermal conductivity [W m^-1 K^-1]
+ If the conductivity option -1 is selected the column 6 is effective, 7 is
+ lattice and 8 is radiative
+Column 7: thermal diffusivity [m^2 s^-1]
+ If the conductivity option -1 is selected the column 9 is effective, 10 is
+ lattice and 11 is radiative
+
+Each rock is separated from the next by a full row of NaN's so that they can be
+easily identified in MatLab using the isnan function.
+
+
+----
+Example input file:
+2 1             % N samples, [-1,0,1,2] = [check each,effective,lattice,radiative]
+
+% Rock 1
+% Westerly Granite [Durham et al., 1987] 
+7
+0 18
+2 29
+4 27.38
+5 9.62
+6 4
+8 9
+13 1
+
+1
+141
+   1.0000000e-04   6.7500000e+02
+   6.3000000e-03   6.7500000e+02
+   1.9500000e-02   6.7400000e+02
+   1.0000000e-04   5.8800000e+02
+   5.8000000e-03   5.8900000e+02
+   5.0000000e-02   6.7300000e+02
+   2.0000000e-02   5.9200000e+02
+   1.0100000e-01   6.7200000e+02
+   1.0000000e-01   5.9200000e+02
+
+% Rock 2
+% Lunar Basalt 10069 [Fuji and Osaka, 1973]
+9
+2    4.8482
+4    7.2773
+5   43.5628
+20    1.0121
+21   19.3016
+22   14.3117
+23    3.4109
+24    2.7935
+26    3.4818
+
+0
+17 25 300
+1 0 0
